@@ -6,6 +6,7 @@ ConfigBackup - A simple tool to backup and restore configuration files
 import os
 import shutil
 import json
+import sys
 from pathlib import Path
 from datetime import datetime
 
@@ -62,15 +63,103 @@ class ConfigBackup:
             json.dump(metadata, f, indent=2)
         
         return backup_session_dir
+    
+    def list_backups(self):
+        """List all available backup sessions"""
+        backup_dirs = []
+        for item in self.backup_dir.iterdir():
+            if item.is_dir() and item.name.startswith("backup_"):
+                metadata_file = item / "metadata.json"
+                if metadata_file.exists():
+                    with open(metadata_file, 'r') as f:
+                        metadata = json.load(f)
+                    backup_dirs.append((item, metadata))
+        
+        backup_dirs.sort(key=lambda x: x[1]['timestamp'], reverse=True)
+        return backup_dirs
+    
+    def restore_configs(self, backup_session_path):
+        """Restore configuration files from a backup session"""
+        backup_path = Path(backup_session_path)
+        metadata_file = backup_path / "metadata.json"
+        
+        if not metadata_file.exists():
+            raise ValueError("Invalid backup session - no metadata found")
+        
+        with open(metadata_file, 'r') as f:
+            metadata = json.load(f)
+        
+        home = Path.home()
+        restored = []
+        
+        for backed_up_file in metadata['backed_up_files']:
+            try:
+                original_path = Path(backed_up_file)
+                rel_path = original_path.relative_to(home)
+                backup_file = backup_path / rel_path
+                
+                if backup_file.exists():
+                    if backup_file.is_file():
+                        shutil.copy2(backup_file, original_path)
+                    elif backup_file.is_dir():
+                        if original_path.exists():
+                            shutil.rmtree(original_path)
+                        shutil.copytree(backup_file, original_path)
+                    
+                    restored.append(str(original_path))
+                    print(f"Restored: {original_path}")
+                else:
+                    print(f"Warning: {backup_file} not found in backup")
+                    
+            except Exception as e:
+                print(f"Failed to restore {backed_up_file}: {e}")
+        
+        return restored
+
+def main():
+    if len(sys.argv) < 2:
+        print("ConfigBackup - Configuration File Management Tool")
+        print("\nUsage:")
+        print("  python config_backup.py backup    - Backup configuration files")
+        print("  python config_backup.py list      - List available backups")
+        print("  python config_backup.py restore   - Restore from latest backup")
+        return
+    
+    backup_tool = ConfigBackup()
+    command = sys.argv[1].lower()
+    
+    if command == "backup":
+        configs = backup_tool.get_common_configs()
+        print(f"Found {len(configs)} configuration files")
+        
+        if configs:
+            print("\nStarting backup...")
+            backup_dir = backup_tool.backup_configs()
+            print(f"\nBackup completed! Files saved to: {backup_dir}")
+        else:
+            print("No configuration files found to backup.")
+            
+    elif command == "list":
+        backups = backup_tool.list_backups()
+        if backups:
+            print("Available backups:")
+            for i, (backup_dir, metadata) in enumerate(backups):
+                print(f"  {i+1}. {metadata['timestamp']} - {len(metadata['backed_up_files'])} files")
+        else:
+            print("No backups found.")
+            
+    elif command == "restore":
+        backups = backup_tool.list_backups()
+        if backups:
+            latest_backup_dir, metadata = backups[0]
+            print(f"Restoring from backup: {metadata['timestamp']}")
+            restored = backup_tool.restore_configs(latest_backup_dir)
+            print(f"\nRestore completed! {len(restored)} files restored.")
+        else:
+            print("No backups found to restore from.")
+    else:
+        print(f"Unknown command: {command}")
+        print("Use 'backup', 'list', or 'restore'")
 
 if __name__ == "__main__":
-    backup = ConfigBackup()
-    configs = backup.get_common_configs()
-    print(f"Found {len(configs)} configuration files")
-    
-    if configs:
-        print("\nStarting backup...")
-        backup_dir = backup.backup_configs()
-        print(f"\nBackup completed! Files saved to: {backup_dir}")
-    else:
-        print("No configuration files found to backup.")
+    main()

@@ -8,13 +8,34 @@ A simple command-line tool for backing up and restoring personal configuration f
 - Support for common config files (.vimrc, .bashrc, .gitconfig, etc.)
 - Easy restoration of configs on new systems
 
-## Getting Started
+## Usage
 
-Coming soon...
+### Backup your configuration files
+```bash
+python3 config_backup.py backup
+```
 
-## TODO
+### List available backups
+```bash
+python3 config_backup.py list
+```
 
-- [ ] Basic backup functionality
-- [ ] Configuration file detection
-- [ ] Restore functionality
+### Restore from latest backup
+```bash
+python3 config_backup.py restore
+```
+
+## Supported Config Files
+
+Currently supports backing up:
+- `.bashrc`
+- `.zshrc`
+- `.vimrc` 
+- `.gitconfig`
+- `.ssh/config`
+
+## Future Enhancements
+
+- [ ] Custom config file lists
+- [ ] Interactive restore selection
 - [ ] Cloud sync support
