@@ -11,21 +11,42 @@ from pathlib import Path
 from datetime import datetime
 
 class ConfigBackup:
-    def __init__(self, backup_dir="~/.config_backup"):
-        self.backup_dir = Path(backup_dir).expanduser()
+    def __init__(self, config_file="config.json", backup_dir="~/.config_backup"):
+        self.config_file = Path(config_file)
+        self.config = self._load_config()
+        self.backup_dir = Path(self.config.get('backup_dir', backup_dir)).expanduser()
         self.backup_dir.mkdir(exist_ok=True)
+    
+    def _load_config(self):
+        """Load configuration from JSON file"""
+        if self.config_file.exists():
+            try:
+                with open(self.config_file, 'r') as f:
+                    return json.load(f)
+            except json.JSONDecodeError as e:
+                print(f"Warning: Invalid JSON in config file: {e}")
+                return {}
+        return {}
         
     def get_common_configs(self):
-        """Get list of common configuration files"""
-        home = Path.home()
-        common_configs = [
-            home / ".bashrc",
-            home / ".zshrc", 
-            home / ".vimrc",
-            home / ".gitconfig",
-            home / ".ssh" / "config"
-        ]
-        return [config for config in common_configs if config.exists()]
+        """Get list of configuration files from config or defaults"""
+        config_files = self.config.get('config_files', [
+            "~/.bashrc",
+            "~/.zshrc", 
+            "~/.vimrc",
+            "~/.gitconfig",
+            "~/.ssh/config"
+        ])
+        
+        configs = []
+        for config_path in config_files:
+            path = Path(config_path).expanduser()
+            if path.exists():
+                configs.append(path)
+            elif not self.config.get('ignore_missing', True):
+                print(f"Warning: {config_path} not found")
+        
+        return configs
     
     def backup_configs(self):
         """Backup all found configuration files"""

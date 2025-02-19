@@ -1,0 +1,12 @@
+{
+  "backup_dir": "~/.config_backup",
+  "config_files": [
+    "~/.bashrc",
+    "~/.zshrc",
+    "~/.vimrc",
+    "~/.gitconfig",
+    "~/.ssh/config",
+    "~/.tmux.conf"
+  ],
+  "ignore_missing": true
+}
