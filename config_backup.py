@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 ConfigBackup - A simple tool to backup and restore configuration files
+Version: 1.0.0
 """
 
 import os
@@ -137,13 +138,18 @@ class ConfigBackup:
         
         return restored
 
+def print_help():
+    print("ConfigBackup v1.0.0 - Configuration File Management Tool")
+    print("\nUsage:")
+    print("  python config_backup.py backup    - Backup configuration files")
+    print("  python config_backup.py list      - List available backups")  
+    print("  python config_backup.py restore   - Restore from latest backup")
+    print("  python config_backup.py help      - Show this help message")
+    print("  python config_backup.py version   - Show version info")
+
 def main():
     if len(sys.argv) < 2:
-        print("ConfigBackup - Configuration File Management Tool")
-        print("\nUsage:")
-        print("  python config_backup.py backup    - Backup configuration files")
-        print("  python config_backup.py list      - List available backups")
-        print("  python config_backup.py restore   - Restore from latest backup")
+        print_help()
         return
     
     backup_tool = ConfigBackup()
@@ -165,7 +171,19 @@ def main():
         if backups:
             print("Available backups:")
             for i, (backup_dir, metadata) in enumerate(backups):
-                print(f"  {i+1}. {metadata['timestamp']} - {len(metadata['backed_up_files'])} files")
+                # Calculate total size
+                total_size = 0
+                for root, dirs, files in os.walk(backup_dir):
+                    for file in files:
+                        if file != 'metadata.json':
+                            file_path = os.path.join(root, file)
+                            try:
+                                total_size += os.path.getsize(file_path)
+                            except OSError:
+                                pass
+                
+                size_str = f"{total_size / 1024:.1f}KB" if total_size < 1024*1024 else f"{total_size / (1024*1024):.1f}MB"
+                print(f"  {i+1}. {metadata['timestamp']} - {len(metadata['backed_up_files'])} files ({size_str})")
         else:
             print("No backups found.")
             
@@ -178,9 +196,13 @@ def main():
             print(f"\nRestore completed! {len(restored)} files restored.")
         else:
             print("No backups found to restore from.")
+    elif command == "help":
+        print_help()
+    elif command == "version":
+        print("ConfigBackup v1.0.0")
     else:
         print(f"Unknown command: {command}")
-        print("Use 'backup', 'list', or 'restore'")
+        print("Use 'help' to see available commands")
 
 if __name__ == "__main__":
     main()
